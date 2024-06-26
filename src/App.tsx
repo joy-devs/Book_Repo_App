@@ -1,4 +1,5 @@
-import React, { useReducer, useEffect, useRef, useState } from 'react';
+
+import React, { useReducer, useRef, useState, useCallback, useEffect } from 'react';
 import useLocalStorage from './hooks';
 import './App.css';
 
@@ -49,27 +50,28 @@ function reducer(state: State, action: Action): State {
 }
 
 const App: React.FC = () => {
-  const [state, dispatch] = useReducer(reducer, initialState);
   const [storedBooks, setStoredBooks] = useLocalStorage<Book[]>('books', []);
+  const [state, dispatch] = useReducer(reducer, {
+    ...initialState,
+    books: storedBooks 
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const titleRef = useRef<HTMLInputElement>(null);
   const authorRef = useRef<HTMLInputElement>(null);
   const yearRef = useRef<HTMLInputElement>(null);
-  const [booksPerPage] = useState(5); 
-
-  // useEffect(() => {
-    
-  //   dispatch({ type: 'SET_BOOKS', payload: storedBooks });
-  // }, [storedBooks]);
+  const booksPerPage = 5;
 
   useEffect(() => {
-    
-    if (state.books !== storedBooks) {
+    dispatch({ type: 'SET_BOOKS', payload: storedBooks });
+  }, [storedBooks]);
+
+  useEffect(() => {
+    if (JSON.stringify(state.books) !== JSON.stringify(storedBooks)) {
       setStoredBooks(state.books);
     }
   }, [state.books, storedBooks, setStoredBooks]);
 
-  const addBook = () => {
+  const addBook = useCallback(() => {
     if (titleRef.current && authorRef.current && yearRef.current) {
       const newBook: Book = {
         id: Date.now(),
@@ -82,17 +84,16 @@ const App: React.FC = () => {
       authorRef.current.value = '';
       yearRef.current.value = '';
     }
-  };
+  }, []);
 
-  const handlePageChange = (page: number) => {
+  const handlePageChange = useCallback((page: number) => {
     dispatch({ type: 'SET_PAGE', payload: page });
-  };
+  }, []);
 
   const filteredBooks = state.books.filter(book =>
     book.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  
   const indexOfLastBook = state.currentPage * booksPerPage;
   const indexOfFirstBook = indexOfLastBook - booksPerPage;
   const paginatedBooks = filteredBooks.slice(indexOfFirstBook, indexOfLastBook);
@@ -108,12 +109,11 @@ const App: React.FC = () => {
         className="form"
       >
         <div className='input'>
-        <input type="text" placeholder="Title" ref={titleRef} required />
-        <input type="text" placeholder="Author" ref={authorRef} required />
-        <input type="number" placeholder="Publication Year" ref={yearRef} required />
+          <input type="text" placeholder="Title" ref={titleRef} required />
+          <input type="text" placeholder="Author" ref={authorRef} required />
+          <input type="number" placeholder="Publication Year" ref={yearRef} required />
         </div>
         <button className='btn' type="submit">Add Book</button>
-        
       </form>
       <input 
         type="text"
