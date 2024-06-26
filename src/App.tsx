@@ -59,7 +59,7 @@ const App: React.FC = () => {
   const titleRef = useRef<HTMLInputElement>(null);
   const authorRef = useRef<HTMLInputElement>(null);
   const yearRef = useRef<HTMLInputElement>(null);
-  const booksPerPage = 5;
+  const booksPerPage = 6;
 
   useEffect(() => {
     dispatch({ type: 'SET_BOOKS', payload: storedBooks });
