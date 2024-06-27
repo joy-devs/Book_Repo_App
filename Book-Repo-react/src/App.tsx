@@ -1,7 +1,8 @@
-
+// App.tsx
 import React, { useReducer, useRef, useState, useCallback, useEffect } from 'react';
 import useLocalStorage from './hooks';
 import './App.css';
+import { fetchBooks, addBook, updateBook, deleteBook } from './Api';
 
 interface Book {
   id: number;
@@ -53,7 +54,7 @@ const App: React.FC = () => {
   const [storedBooks, setStoredBooks] = useLocalStorage<Book[]>('books', []);
   const [state, dispatch] = useReducer(reducer, {
     ...initialState,
-    books: storedBooks 
+    books: storedBooks
   });
   const [searchQuery, setSearchQuery] = useState('');
   const titleRef = useRef<HTMLInputElement>(null);
@@ -71,7 +72,19 @@ const App: React.FC = () => {
     }
   }, [state.books, storedBooks, setStoredBooks]);
 
-  const addBook = useCallback(() => {
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const data = await fetchBooks();
+        dispatch({ type: 'SET_BOOKS', payload: data });
+      } catch (error) {
+        console.error('Error fetching books:', error);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const handleAddBook = useCallback(async () => {
     if (titleRef.current && authorRef.current && yearRef.current) {
       const newBook: Book = {
         id: Date.now(),
@@ -79,10 +92,39 @@ const App: React.FC = () => {
         author: authorRef.current.value,
         year: parseInt(yearRef.current.value, 10)
       };
-      dispatch({ type: 'ADD_BOOK', payload: newBook });
-      titleRef.current.value = '';
-      authorRef.current.value = '';
-      yearRef.current.value = '';
+
+      try {
+        const addedBook = await addBook(newBook);
+        dispatch({ type: 'ADD_BOOK', payload: addedBook });
+
+        titleRef.current.value = '';
+        authorRef.current.value = '';
+        yearRef.current.value = '';
+      } catch (error) {
+        console.error('Error adding book:', error);
+      }
+    }
+  }, []);
+
+  const handleUpdateBook = useCallback(async (updatedBook: Book) => {
+    try {
+      const updated = await updateBook(updatedBook);
+      if (updated) {
+        dispatch({ type: 'UPDATE_BOOK', payload: updatedBook });
+      }
+    } catch (error) {
+      console.error('Error updating book:', error);
+    }
+  }, []);
+
+  const handleDeleteBook = useCallback(async (bookId: number) => {
+    try {
+      const deleted = await deleteBook(bookId);
+      if (deleted) {
+        dispatch({ type: 'DELETE_BOOK', payload: bookId });
+      }
+    } catch (error) {
+      console.error('Error deleting book:', error);
     }
   }, []);
 
@@ -104,7 +146,7 @@ const App: React.FC = () => {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          addBook();
+          handleAddBook();
         }}
         className="form"
       >
@@ -142,7 +184,7 @@ const App: React.FC = () => {
                     const updatedTitle = prompt('Enter new title:', book.title);
                     if (updatedTitle) {
                       const updatedBook = { ...book, title: updatedTitle };
-                      dispatch({ type: 'UPDATE_BOOK', payload: updatedBook });
+                      handleUpdateBook(updatedBook);
                     }
                   }}
                 >
@@ -150,7 +192,7 @@ const App: React.FC = () => {
                 </button>
                 <button className='btn3'
                  onClick={() => 
-                 dispatch({ type: 'DELETE_BOOK', payload: book.id })}>Delete</button>
+                 handleDeleteBook(book.id)}>Delete</button>
               </td>
             </tr>
           ))}
